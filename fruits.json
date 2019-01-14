@@ -1,0 +1,48 @@
+[ 
+	{ 
+		"title": "apple",
+		"price": 110,
+		"inventory_count": 12  
+	},
+	{ 
+		"title": "orange",
+		"price": 149,
+		"inventory_count": 15  
+	},
+	{ 
+		"title": "pomegranate",
+		"price": 249,
+		"inventory_count": 4 
+	},		
+	{ 
+		"title": "durian",
+		"price": 499,
+		"inventory_count": 0  
+	},
+	{ 
+		"title": "pineapple",
+		"price": 379,
+		"inventory_count": 6 
+	},	
+	{ 
+		"title": "mango",
+		"price": 399,
+		"inventory_count": 7 
+	},	
+	{ 
+		"title": "guanabana",
+		"price": 599,
+		"inventory_count": 1 
+	},	
+	{ 
+		"title": "coconut",
+		"price": 499,
+		"inventory_count": 5 
+	}	
+]
+	
+
+
+
+
+
