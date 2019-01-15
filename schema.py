@@ -10,6 +10,26 @@ from models import db_session, Product as ProductModel, Cart as CartModel, Item 
 
 import utils
 
+## Product schema
+class Product(SQLAlchemyObjectType):
+    class Meta:
+        model = ProductModel
+        interfaces = (relay.Node, )
+            
+class ProductConnection(relay.Connection):
+    class Meta:
+        node = Product
+
+##Cart schema
+class Cart(SQLAlchemyObjectType):
+    class Meta:
+        model = CartModel
+        interfaces = (relay.Node, )
+
+    def resolve_total(self,info):
+        return sum([item.product.price for item in self.items])
+
+## Item schema
 class Item(SQLAlchemyObjectType):
     class Meta:
         model = ItemModel
@@ -19,31 +39,8 @@ class ItemsConnection(relay.Connection):
     class Meta:
         node = Item
 
-class AddItemInput(graphene.InputObjectType):
-    cart_id = graphene.ID(required=True,description="Global id of cart that item will be added to.")
-    product_id = graphene.ID(required=True, description="Global id of the desired product.")
 
-class AddItem(graphene.Mutation):
-    cart = graphene.Field(lambda: Cart, description="Cart including added item")
-
-    class Arguments:
-        input=AddItemInput(required=True)
-
-    def mutate(self,info,input):
-        data = utils.input_to_dictionary(input)
-        item = ItemModel(**data)
-        db_session.add(item)
-        db_session.commit()
-        return AddItem(cart=item.cart)
-
-class Cart(SQLAlchemyObjectType):
-    class Meta:
-        model = CartModel
-        interfaces = (relay.Node, )
-
-    def resolve_total(self,info):
-        return sum([item.product.price for item in self.items])
-
+## Cart mutations
 class CreateCart(graphene.Mutation):
     cart = graphene.Field(lambda: Cart)
 
@@ -53,8 +50,9 @@ class CreateCart(graphene.Mutation):
         db_session.commit()
         return CreateCart(cart=cart)
 
+
 class CompleteCartInput(graphene.InputObjectType):
-    id=graphene.ID(required=True,description="Global ID of cart to be completed")
+    id=graphene.ID(required=True,description="Global ID of cart to be completed.")
 
 class CompleteCart(graphene.Mutation):
     success = graphene.Boolean(description="True if and only if all products have succifient inventory.")
@@ -77,19 +75,28 @@ class CompleteCart(graphene.Mutation):
         if insufficient_stock:
             db_session.rollback()
             return CompleteCart(success=False,insufficient_stock=insufficient_stock)
-        db_session.query(CartModel).filter_by(id=data['id']).delete()
         db_session.commit()
         return CompleteCart(success=True)
 
-class Product(SQLAlchemyObjectType):
-    class Meta:
-        model = ProductModel
-        interfaces = (relay.Node, )
-            
-class ProductConnection(relay.Connection):
-    class Meta:
-        node = Product
+class AddItemInput(graphene.InputObjectType):
+    cart_id = graphene.ID(required=True,description="Global id of cart that item will be added to.")
+    product_id = graphene.ID(required=True, description="Global id of the desired product.")
 
+class AddItem(graphene.Mutation):
+    cart = graphene.Field(lambda: Cart, description="Cart including added item")
+
+    class Arguments:
+        input=AddItemInput(required=True)
+
+    def mutate(self,info,input):
+        data = utils.input_to_dictionary(input)
+        item = ItemModel(**data)
+        db_session.add(item)
+        db_session.commit()
+        return AddItem(cart=item.cart)
+
+
+## Root types
 class Query(graphene.ObjectType):
     node = relay.Node.Field()
     # Allows sorting over multiple columns, by default over the primary key

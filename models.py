@@ -21,7 +21,7 @@ class Product(Base):
 class Cart(Base):
     __tablename__ = 'cart'
     id = Column(Integer, primary_key=True)
-    items = relationship("Item", uselist=True, cascade='delete,all')
+    items = relationship("Item", uselist=True, cascade='delete,all', backref="cart")
     total = Column(Integer)
 
 
@@ -29,7 +29,6 @@ class Item(Base):
     __tablename__ = 'item'
     id = Column(Integer, primary_key=True)
     cart_id = Column(Integer, ForeignKey('cart.id'))
-    cart=relationship("Cart")
     product_id = Column(Integer, ForeignKey('product.id'))
     product = relationship("Product") 
 
