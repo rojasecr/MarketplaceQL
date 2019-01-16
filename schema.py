@@ -86,7 +86,7 @@ class CartComplete(graphene.Mutation):
                 db_session.query(ProductModel).filter_by(id=prod.id).update(dict(inventory_count=new_inventory))
         if insufficient_stock:
             db_session.rollback()
-            return CompleteCart(success=False,insufficient_stock=insufficient_stock)
+            return CartComplete(success=False,insufficient_stock=insufficient_stock)
         db_session.commit()
         return CartComplete(success=True)
 
