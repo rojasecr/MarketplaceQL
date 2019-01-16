@@ -1,6 +1,7 @@
 from typing import Union
 from collections import Counter
 from graphql_relay.node.node import to_global_id
+from graphql_relay.node.node import from_global_id
 
 # flask_sqlalchemy/schema.py
 import graphene
@@ -8,7 +9,6 @@ from graphene import relay
 from graphene_sqlalchemy import SQLAlchemyObjectType, SQLAlchemyConnectionField
 from models import db_session, Product as ProductModel, Cart as CartModel, Item as ItemModel
 
-import utils
 
 ## Product schema
 class Product(SQLAlchemyObjectType):
@@ -41,29 +41,41 @@ class ItemsConnection(relay.Connection):
 
 
 ## Cart mutations
-class CreateCart(graphene.Mutation):
+class CartCreate(graphene.Mutation):
     cart = graphene.Field(lambda: Cart)
 
     def mutate(self, info):
         cart = CartModel(total=0)
         db_session.add(cart)
         db_session.commit()
-        return CreateCart(cart=cart)
+        return CartCreate(cart=cart)
 
 
-class CompleteCartInput(graphene.InputObjectType):
-    id=graphene.ID(required=True,description="Global ID of cart to be completed.")
+class CartAdd(graphene.Mutation):
+    cart = graphene.Field(lambda: Cart, description="Cart including added item")
 
-class CompleteCart(graphene.Mutation):
+    class Arguments:
+        cart_id = graphene.ID(required=True,description="Global id of cart that item will be added to.")
+        product_id = graphene.ID(required=True, description="Global id of the desired product.")
+
+    def mutate(self,info,cart_id,product_id):
+        local_cart_id, local_product_id = from_global_id(cart_id)[1], from_global_id(product_id)[1] 
+        item = ItemModel(cart_id=local_cart_id,product_id=local_product_id)
+        db_session.add(item)
+        db_session.commit()
+        return CartAdd(cart=item.cart)
+
+
+class CartComplete(graphene.Mutation):
     success = graphene.Boolean(description="True if and only if all products have succifient inventory.")
     insufficient_stock=graphene.List(graphene.ID,description="List of items that have insufficient inventory.")
 
     class Arguments:
-        input=CompleteCartInput(required=True)
+        id=graphene.ID(required=True,description="Global ID of cart to be completed.")
 
-    def mutate(self,info,input):
-        data = utils.input_to_dictionary(input)
-        cart=db_session.query(CartModel).filter_by(id=data['id']).scalar()
+    def mutate(self,info,id):
+        local_id=from_global_id(id)[1]
+        cart=db_session.query(CartModel).filter_by(id=local_id).scalar()
         in_cart=Counter([item.product for item in cart.items])
         insufficient_stock=[]
         for prod in in_cart:
@@ -76,46 +88,27 @@ class CompleteCart(graphene.Mutation):
             db_session.rollback()
             return CompleteCart(success=False,insufficient_stock=insufficient_stock)
         db_session.commit()
-        return CompleteCart(success=True)
-
-class AddItemInput(graphene.InputObjectType):
-    cart_id = graphene.ID(required=True,description="Global id of cart that item will be added to.")
-    product_id = graphene.ID(required=True, description="Global id of the desired product.")
-
-class AddItem(graphene.Mutation):
-    cart = graphene.Field(lambda: Cart, description="Cart including added item")
-
-    class Arguments:
-        input=AddItemInput(required=True)
-
-    def mutate(self,info,input):
-        data = utils.input_to_dictionary(input)
-        item = ItemModel(**data)
-        db_session.add(item)
-        db_session.commit()
-        return AddItem(cart=item.cart)
+        return CartComplete(success=True)
 
 
 ## Root types
 class Query(graphene.ObjectType):
     node = relay.Node.Field()
-    # Allows sorting over multiple columns, by default over the primary key
-    all_products = SQLAlchemyConnectionField(ProductConnection, in_stock=graphene.Boolean(description="Only return in stock products when true."))
 
-    def resolve_all_products(self, info, in_stock=False, **args):
+    productView = relay.Node.Field(Product)
+    productViewAll = SQLAlchemyConnectionField(ProductConnection, in_stock=graphene.Boolean(description="Only return in stock products when true."))
+    def resolve_productViewAll(self, info, in_stock=False, **args):
         q=Product.get_query(info)
         if in_stock:
             return q.filter(ProductModel.inventory_count > 0)
         return q.all()
 
-    #Make a parameter for all_products
-    product = relay.Node.Field(Product)
-    cart = relay.Node.Field(Cart)
+    cartView = relay.Node.Field(Cart)
 
 
 class Mutation(graphene.ObjectType):
-    createCart = CreateCart.Field()
-    addItem = AddItem.Field()
-    completeCart = CompleteCart.Field()
+    cartCreate = CartCreate.Field()
+    cartAdd = CartAdd.Field()
+    cartComplete = CartComplete.Field()
 
 schema = graphene.Schema(query=Query,mutation=Mutation)
