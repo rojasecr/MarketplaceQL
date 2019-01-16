@@ -36,7 +36,7 @@ View the id, title, price, and inventory count of each product. Note that price 
 ```graphql
 
 query {
-  allProducts {
+  productViewAll {
     edges { 
       node {
         id
@@ -52,7 +52,7 @@ We can pass an argument to allProducts so that it only returns products with ava
 ```graphql
 
 query {
-  allProducts(inStock: true) {
+  productViewAll(inStock: true) {
     edges { 
       node {
         id
@@ -64,47 +64,54 @@ query {
   } 
 }
 ```
+
+Thanks to power of GraphQL connections, we can create a feed for viewing products in segments. Indeed the "first" argument controls how many products are returned and the "hasNextPage" attribute tells us if there are more products to see.
+```graphql
+
+query {
+  productViewAll(first: {segment_size}) {
+    edges { 
+      cursor
+      node {
+        id
+	title
+	price
+	inventoryCount
+      }
+    }
+    pageInfo {
+      hasNextPage
+    }
+  } 
+}
+```
+The previous or next segment is returned by passing the cursor to the "before" or "after" arguments respectively.
+```graphql
+
+query {
+  productViewAll(first: {segment_size}, after: "{cursor}") {
+    edges { 
+      cursor
+      node {
+        id
+	title
+	price
+	inventoryCount
+      }
+    }
+    pageInfo {
+      hasNextPage
+    }
+  } 
+}
 
 #### One at a time
-We can create a feed for viewing products one at a time by querying the first product,
-```graphql
-
-query {
-  allProducts(first: 1) {
-    edges { 
-      node {
-        id
-	title
-	price
-	inventoryCount
-      }
-      cursor
-    }
-  } 
-}
 ```
-and then passing the cursor to "before" or "after" arguments to get the previous or next item respectively.
+We can fetch individual products using their id.
 ```graphql
 
 query {
-  allProducts(first: 1, after: "{cursor}") {
-    edges { 
-      node {
-        id
-	title
-	price
-	inventoryCount
-      }
-      cursor
-    }
-  } 
-}
-```
-Additionally, we can always fetch individual products using their id.
-```graphql
-
-query {
-  product(id: "{prod_id}") {
+  productView(id: "{prod_id}") {
     id
     title
     price
@@ -120,7 +127,7 @@ In order to purchase anything, one must first create a cart.
 ```graphql
 
 mutation {
-  createCart {
+  cartCreate {
     cart {
       id
     }
@@ -135,10 +142,7 @@ We can add items to the cart by passing the id of the cart and the id of the pro
 ```graphql
 
 mutation {
-  addItem(input:{
-    cartID: "{cart_id}"
-    productID: "{product_id}" 
-  )} {
+  cartAdd(productId:"{prod_id}", cartId:"{cart_id}") {
     cart {
       id
       total
@@ -152,10 +156,7 @@ This command adds an item to the cart and then returns the cart's id and the tot
 ```graphql
 
 mutation {
-  addItem(input:{
-    cartID: "{cart_id}"
-    productID: "{product_id}" 
-  )} {
+  cartAdd(productId:"{prod_id}", cartId:"{cart_id}") {
     cart {
       id
       total
@@ -182,7 +183,7 @@ We can query a cart by its id to view the items in the cart and the total cost o
 ```graphql
 
 query {
-  cart(id: "{cart_id}") {
+  cartView(id: "{cart_id}") {
     id
     total
     items {
@@ -206,9 +207,7 @@ Once you have a cart full of items you can complete the cart in order to purchas
 ```graphql
 
 mutation {
-  completeCart(input:{
-    id: "{cart_id}"
-  )} {
+  cartComplete(id: "{cart_id}") {
     success
     insufficientStock
   } 
