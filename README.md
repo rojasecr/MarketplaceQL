@@ -105,8 +105,9 @@ query {
   } 
 }
 
-#### One at a time
 ```
+
+#### One at a time
 We can fetch individual products using their id.
 ```graphql
 
@@ -134,7 +135,7 @@ mutation {
   } 
 }
 ```
-This command creates a cart and returns the global id of the new cart. As with everything in GraphQL,we could alter the input in order to return additional information about the cart. We will soon see examples of this.
+This command creates a cart and returns the global id of the new cart. As with everything in GraphQL, we could alter the input in order to return additional information about the cart. We will soon see examples of this.
 
 #### Add an item
 We can add items to the cart by passing the id of the cart and the id of the product we want to add.
