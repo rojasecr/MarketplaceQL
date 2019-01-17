@@ -44,10 +44,18 @@ class ItemsConnection(relay.Connection):
 class CartCreate(graphene.Mutation):
     cart = graphene.Field(lambda: Cart)
 
-    def mutate(self, info):
+    class Arguments:
+        product_id = graphene.ID(description="Global id of the desired product.")
+
+    def mutate(self, info, product_id=None):
         cart = CartModel(total=0)
         db_session.add(cart)
         db_session.commit()
+        if product_id is not None:
+            local_product_id=from_global_id(product_id)[1]
+            item = ItemModel(cart_id=cart.id,product_id=local_product_id)
+            db_session.add(item)
+            db_session.commit()
         return CartCreate(cart=cart)
 
 
@@ -74,10 +82,10 @@ class CartComplete(graphene.Mutation):
         id=graphene.ID(required=True,description="Global ID of cart to be completed.")
 
     def mutate(self,info,id):
-        local_id=from_global_id(id)[1]
+        local_id = from_global_id(id)[1]
         cart=db_session.query(CartModel).filter_by(id=local_id).scalar()
-        in_cart=Counter([item.product for item in cart.items])
-        insufficient_stock=[]
+        in_cart = Counter([item.product for item in cart.items])
+        insufficient_stock = []
         for prod in in_cart:
             new_inventory= prod.inventory_count - in_cart[prod]
             if new_inventory < 0:

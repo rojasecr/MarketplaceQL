@@ -124,11 +124,11 @@ query {
 ### Making a purchase 
 
 #### Create a cart
-In order to purchase anything, one must first create a cart.
+In order to purchase anything, one must first create a cart. We have the option of passing a product id arugment to create the cart with the desired product. 
 ```graphql
 
 mutation {
-  cartCreate {
+  cartCreate(productId:"{optional_prod_id}") {
     cart {
       id
     }
